@@ -17,11 +17,11 @@ def collate_fn(dataset_items: list[dict]):
 
     result_batch = {}
 
-    audios = [item["audio"].squeeze(dim=0) for item in dataset_items]
+    audios = [item["audio"] for item in dataset_items]
     labels = [item["labels"] for item in dataset_items]
 
     padded_audio = pad_sequence(sequences=audios, batch_first=True, padding_value=0.0)
-    result_batch["audio"] = padded_audio.unsqueeze(dim=1)
+    result_batch["audio"] = padded_audio
     result_batch["labels"] = torch.tensor(labels)
 
     return result_batch

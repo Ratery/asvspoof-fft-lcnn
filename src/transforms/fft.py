@@ -1,5 +1,4 @@
 import torch
-import torchaudio
 from torch import nn
 
 
@@ -14,19 +13,26 @@ class FFTLogPowerSpectrum(nn.Module):
     ):
         super().__init__()
 
-        self.spec = torchaudio.transforms.Spectrogram(
-            n_fft=n_fft,
-            win_length=win_length,
-            hop_length=hop_length,
-            window_fn=window_fn,
-            power=2,
-            normalized=False,
-        )
+        self.n_fft = n_fft
+        self.win_length = win_length
+        self.hop_length = hop_length
         self.target_frames = target_frames
 
+        window = window_fn(win_length)
+        self.register_buffer("window", window)
+
     def forward(self, audio):
-        power_spec = self.spec(audio)
-        log_spec = torch.log(power_spec + 1e-9)
+        spec = torch.stft(
+            input=audio,
+            n_fft=self.n_fft,
+            hop_length=self.hop_length,
+            win_length=self.win_length,
+            window=self.window,
+            center=False,
+            return_complex=True,
+        )
+        log_spec = torch.log(spec.abs().pow(2) + 1e-9)
+        log_spec = log_spec.unsqueeze(1)
         return self._to_fixed_frames(log_spec, self.target_frames)
 
     def _to_fixed_frames(self, spec, target_frames):
@@ -34,4 +40,4 @@ class FFTLogPowerSpectrum(nn.Module):
             pad_len = target_frames - spec.shape[-1]
             return nn.functional.pad(spec, (0, pad_len), value=0.0)
         else:
-            return spec[:, :target_frames]
+            return spec[..., :target_frames]

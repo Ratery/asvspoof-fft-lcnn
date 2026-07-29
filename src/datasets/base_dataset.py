@@ -91,7 +91,7 @@ class BaseDataset(Dataset):
             raise ValueError(
                 f"Can not load audio. Expected mono, got shape {waveform.shape}: {path}"
             )
-        return waveform
+        return waveform.squeeze(dim=0)
 
     def preprocess_data(self, instance_data):
         """
