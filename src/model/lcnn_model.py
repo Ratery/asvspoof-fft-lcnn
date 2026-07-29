@@ -10,7 +10,9 @@ class AngularClassifier(nn.Module):
         self.num_features = num_features
         self.num_classes = num_classes
         self.margin_value = margin_value
+
         self.weights = nn.Parameter(torch.Tensor(num_classes, num_features))
+        nn.init.kaiming_normal_(self.weights)
 
     def forward(self, embeddings):
         eps = 1e-9
@@ -101,6 +103,7 @@ class LCNNModel(nn.Module):
         self.classifier = AngularClassifier(
             num_features=80, num_classes=2, margin_value=angular_margin
         )
+        self._initialize_weights()
 
     def forward(self, audio, **batch):
         """
@@ -114,6 +117,18 @@ class LCNNModel(nn.Module):
         embeddings = self.net(audio)
         logits, margin_logits = self.classifier(embeddings)
         return {"logits": logits, "margin_logits": margin_logits}
+
+    def _initialize_weights(self):
+        def kaiming_init_weights(module):
+            if isinstance(module, (nn.Linear, nn.Conv2d)):
+                nn.init.kaiming_normal_(module.weight)
+                if module.bias is not None:
+                    nn.init.zeros_(module.bias)
+            elif isinstance(module, (nn.BatchNorm1d, nn.BatchNorm2d)):
+                nn.init.ones_(module.weight)
+                nn.init.zeros_(module.bias)
+
+        self.apply(kaiming_init_weights)
 
     def __str__(self):
         """
