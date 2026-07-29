@@ -2,7 +2,7 @@ import logging
 import random
 from typing import List
 
-import torch
+import torchaudio
 from torch.utils.data import Dataset
 
 logger = logging.getLogger(__name__)
@@ -57,10 +57,12 @@ class BaseDataset(Dataset):
         """
         data_dict = self._index[ind]
         data_path = data_dict["path"]
-        data_object = self.load_object(data_path)
-        data_label = data_dict["label"]
 
-        instance_data = {"data_object": data_object, "labels": data_label}
+        audio = self.load_audio(data_path)
+        label = data_dict["label"]
+        metadata = data_dict["metadata"]
+
+        instance_data = {"audio": audio, "labels": label, "metadata": metadata}
         instance_data = self.preprocess_data(instance_data)
 
         return instance_data
@@ -71,17 +73,25 @@ class BaseDataset(Dataset):
         """
         return len(self._index)
 
-    def load_object(self, path):
+    def load_audio(self, path):
         """
-        Load object from disk.
+        Load audio from disk.
 
         Args:
             path (str): path to the object.
         Returns:
-            data_object (Tensor):
+            audio (Tensor):
         """
-        data_object = torch.load(path)
-        return data_object
+        waveform, sr = torchaudio.load(path)
+        if sr != 16000:
+            raise ValueError(
+                f"Can not load audio. Expected 16 kHz sample rate, got {sr} Hz: {path}"
+            )
+        if waveform.shape[0] != 1:
+            raise ValueError(
+                f"Can not load audio. Expected mono, got shape {waveform.shape}: {path}"
+            )
+        return waveform
 
     def preprocess_data(self, instance_data):
         """

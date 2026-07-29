@@ -1,1 +1,1 @@
-from src.loss.example import ExampleLoss
+from src.loss.asoftmax_loss import ASoftmaxLoss
