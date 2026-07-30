@@ -12,7 +12,7 @@ class EERMetric(EpochMetric):
         self._labels = []
 
     def __call__(self, logits: torch.Tensor, labels: torch.Tensor, **kwargs):
-        scores = logits[:, 0] - logits[:, 1]
+        scores = logits[:, 1] - logits[:, 0]
         self._scores.append(scores.detach().cpu())
         self._labels.append(labels.detach().cpu())
         return None

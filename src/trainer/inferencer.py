@@ -1,3 +1,5 @@
+import csv
+
 import torch
 from tqdm.auto import tqdm
 
@@ -75,6 +77,7 @@ class Inferencer(BaseTrainer):
             )
         else:
             self.evaluation_metrics = None
+        self.all_scores = []
 
         if not skip_model_load:
             # init model
@@ -124,7 +127,7 @@ class Inferencer(BaseTrainer):
 
         if metrics is not None:
             for met in self.metrics["inference"]:
-                metrics.update(met.name, met(**batch))
+                metrics.update(met.name, met(**batch), n=batch["labels"].shape[0])
 
         # Some saving logic. This is an example
         # Use if you need to save predictions on disk
@@ -137,14 +140,22 @@ class Inferencer(BaseTrainer):
             # https://github.com/pytorch/pytorch/issues/1995
             logits = batch["logits"][i].clone()
             label = batch["labels"][i].clone()
-            pred_label = logits.argmax(dim=-1)
+            metadata = batch["metadata"][i]
+            score = logits[1] - logits[0]
 
-            output_id = current_id + i
+            self.all_scores.append(
+                {
+                    "label": label.item(),
+                    "score": score.item(),
+                    "audio_filename": metadata["audio_filename"],
+                }
+            )
 
             output = {
-                "pred_label": pred_label,
                 "label": label,
+                "score": score,
             }
+            output_id = current_id + i
 
             if self.save_path is not None:
                 # you can use safetensors or other lib here
@@ -167,6 +178,8 @@ class Inferencer(BaseTrainer):
         self.model.eval()
 
         self.evaluation_metrics.reset()
+        self._reset_epoch_metrics(self.metrics["inference"])
+        self.all_scores.clear()
 
         # create Save dir
         if self.save_path is not None:
@@ -184,5 +197,14 @@ class Inferencer(BaseTrainer):
                     part=part,
                     metrics=self.evaluation_metrics,
                 )
+
+        self._compute_epoch_metrics(self.metrics["inference"], self.evaluation_metrics)
+
+        if self.save_path is not None:
+            csv_path = self.save_path / part / "cm_scores.csv"
+            with csv_path.open(mode="w", newline="") as file:
+                writer = csv.writer(file)
+                for item in self.all_scores:
+                    writer.writerow([item["audio_filename"], item["score"]])
 
         return self.evaluation_metrics.result()
