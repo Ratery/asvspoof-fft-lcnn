@@ -6,6 +6,7 @@ from torch.nn.utils import clip_grad_norm_
 from tqdm.auto import tqdm
 
 from src.datasets.data_utils import inf_loop
+from src.metrics.epoch_metric import EpochMetric
 from src.metrics.tracker import MetricTracker
 from src.utils.io_utils import ROOT_PATH
 
@@ -200,6 +201,7 @@ class BaseTrainer:
         self.is_train = True
         self.model.train()
         self.train_metrics.reset()
+        self._reset_epoch_metrics(self.metrics["train"])
         self.writer.set_step((epoch - 1) * self.epoch_len)
         self.writer.add_scalar("epoch", epoch)
         for batch_idx, batch in enumerate(
@@ -263,6 +265,7 @@ class BaseTrainer:
         self.is_train = False
         self.model.eval()
         self.evaluation_metrics.reset()
+        self._reset_epoch_metrics(self.metrics["inference"])
         with torch.no_grad():
             for batch_idx, batch in tqdm(
                 enumerate(dataloader),
@@ -274,6 +277,9 @@ class BaseTrainer:
                     metrics=self.evaluation_metrics,
                 )
             self.writer.set_step(epoch * self.epoch_len, part)
+            self._compute_epoch_metrics(
+                self.metrics["inference"], self.evaluation_metrics
+            )
             self._log_scalars(self.evaluation_metrics)
             self._log_batch(
                 batch_idx, batch, part
@@ -450,6 +456,16 @@ class BaseTrainer:
             return
         for metric_name in metric_tracker.keys():
             self.writer.add_scalar(f"{metric_name}", metric_tracker.avg(metric_name))
+
+    def _reset_epoch_metrics(self, all_metrics):
+        for metric in all_metrics:
+            if isinstance(metric, EpochMetric):
+                metric.reset()
+
+    def _compute_epoch_metrics(self, all_metrics, tracker):
+        for metric in all_metrics:
+            if isinstance(metric, EpochMetric):
+                tracker.update(metric.name, metric.compute())
 
     def _save_checkpoint(self, epoch, save_best=False, only_best=False):
         """

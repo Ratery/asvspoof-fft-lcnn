@@ -1,9 +1,9 @@
 from abc import abstractmethod
 
 
-class BaseMetric:
+class EpochMetric:
     """
-    Base class for all metrics
+    Base class for stateful epoch metrics
     """
 
     def __init__(self, name=None, *args, **kwargs):
@@ -15,8 +15,12 @@ class BaseMetric:
 
     @abstractmethod
     def __call__(self, **batch):
-        """
-        Defines metric calculation logic for a given batch.
-        Can use external functions (like TorchMetrics) or custom ones.
-        """
+        raise NotImplementedError()
+
+    @abstractmethod
+    def reset(self):
+        raise NotImplementedError()
+
+    @abstractmethod
+    def compute(self):
         raise NotImplementedError()
