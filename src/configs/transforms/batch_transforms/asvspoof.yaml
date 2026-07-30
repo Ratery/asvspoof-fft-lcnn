@@ -1,19 +1,15 @@
 train:
   audio:
-    _target_: torchvision.transforms.v2.Compose
-    transforms:
-      - _target_: src.transforms.FFTLogPowerSpectrum
-        n_fft: 1724
-        win_length: 1724
-        hop_length: 130
-        target_frames: 600
+    _target_: src.transforms.FFTLogPowerSpectrum
+    n_fft: 1724
+    win_length: 1724
+    hop_length: 130
+    target_frames: 600
 
 inference:
   audio:
-    _target_: torchvision.transforms.v2.Compose
-    transforms:
-      - _target_: src.transforms.FFTLogPowerSpectrum
-        n_fft: 1724
-        win_length: 1724
-        hop_length: 130
-        target_frames: 600
+    _target_: src.transforms.FFTLogPowerSpectrum
+    n_fft: 1724
+    win_length: 1724
+    hop_length: 130
+    target_frames: 600
