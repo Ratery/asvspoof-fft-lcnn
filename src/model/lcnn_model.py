@@ -26,8 +26,12 @@ class AngularClassifier(nn.Module):
             input=normalized_embeddings, weight=normalized_weights
         ).clamp(min=-1.0 + eps, max=1.0 - eps)
         theta = torch.acos(cos_theta)
+        m_theta = self.margin_value * theta
 
-        margin_logits = torch.cos(self.margin_value * theta) * embeddings_norm
+        k = torch.floor(m_theta / torch.pi)
+        phi = torch.pow(-1, k) * torch.cos(m_theta) - 2 * k
+
+        margin_logits = phi * embeddings_norm
         logits = cos_theta * embeddings_norm
 
         return logits, margin_logits
